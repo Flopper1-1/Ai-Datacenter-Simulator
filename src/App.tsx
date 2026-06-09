@@ -17,6 +17,8 @@ const App: React.FC = () => {
     gameGen: 0,
     autonomousWarfare: false,
     partnership: 0,
+    autoClicker: 0,
+    clickCooldown: 0,
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeEvent, setActiveEvent] = useState<{title: string, desc: string, effect: string} | null>(null);
@@ -62,21 +64,36 @@ const App: React.FC = () => {
 
   // Load Game
   useEffect(() => {
-    const saved = localStorage.getItem('ai-datacenter-save');
-    if (saved) {
+    let saved = null;
+    if ((window as any).require) {
       try {
-        const data = JSON.parse(saved);
-        setPolarBears(data.polarBears || 0);
-        setMoney(data.money || 0);
-        setRep(data.rep || 0);
-        setUpgrades(data.upgrades || upgrades);
-        setSelectedModel(data.selectedModel || null);
-        bearsRef.current = data.polarBears || 0;
-        moneyRef.current = data.money || 0;
-        repRef.current = data.rep || 0;
+        const electron = (window as any).require('electron');
+        saved = electron.ipcRenderer.sendSync('load-game');
       } catch (e) {
-        console.error("Failed to load save", e);
+        console.error("Failed to load from Electron", e);
       }
+    }
+    
+    if (!saved) {
+      const localSaved = localStorage.getItem('ai-datacenter-save');
+      if (localSaved) {
+        try {
+          saved = JSON.parse(localSaved);
+        } catch (e) {
+          console.error("Failed to parse local save", e);
+        }
+      }
+    }
+
+    if (saved) {
+      setPolarBears(saved.polarBears || 0);
+      setMoney(saved.money || 0);
+      setRep(saved.rep || 0);
+      setUpgrades(saved.upgrades || upgrades);
+      setSelectedModel(saved.selectedModel || null);
+      bearsRef.current = saved.polarBears || 0;
+      moneyRef.current = saved.money || 0;
+      repRef.current = saved.rep || 0;
     }
     setIsLoaded(true);
   }, []);
@@ -92,6 +109,15 @@ const App: React.FC = () => {
         upgrades,
         selectedModel
       };
+
+      if ((window as any).require) {
+        try {
+          const electron = (window as any).require('electron');
+          electron.ipcRenderer.send('save-game', saveData);
+        } catch (e) {
+          console.error("Failed to save to Electron", e);
+        }
+      }
       localStorage.setItem('ai-datacenter-save', JSON.stringify(saveData));
     }, 5000);
     return () => clearInterval(interval);
@@ -130,8 +156,21 @@ const App: React.FC = () => {
 
     let repRate = selectedModel === 'Sonnet' ? 0.009 : 0;
 
+    // Apply event effects
+    if (activeEvent) {
+      if (activeEvent.effect === 'PROTEST') {
+        pbRate *= 0.2;
+        repRate += 0.5;
+      } else if (activeEvent.effect === 'FUNDING') {
+        moneyRate *= 5;
+      } else if (activeEvent.effect === 'OVERHEAT') {
+        pbRate *= 0.5;
+        moneyRate *= 0.5;
+      }
+    }
+
     return { pbRate, moneyRate, repRate };
-  }, [selectedModel, upgrades]);
+  }, [selectedModel, upgrades, activeEvent]);
 
   const processResourceGain = useCallback((pbGain: number, moneyGain: number, repGain: number) => {
     const oldBears = bearsRef.current;
@@ -164,17 +203,25 @@ const App: React.FC = () => {
       if (selectedModel) {
         const { pbRate, moneyRate, repRate } = calculateRates();
         processResourceGain(pbRate * dt, moneyRate * dt, repRate * dt);
+
+        // Autoclicker logic
+        if (upgrades.autoClicker > 0) {
+          const model = MODELS[selectedModel];
+          const autoClickGain = upgrades.autoClicker * dt; // Assuming 1 click per second per level
+          processResourceGain(model.pbPerClick * autoClickGain, model.moneyPerClick * autoClickGain, 0);
+        }
       }
     }, 100);
 
     return () => clearInterval(interval);
-  }, [selectedModel, calculateRates, processResourceGain]);
+  }, [selectedModel, calculateRates, processResourceGain, upgrades.autoClicker]);
 
   const handleClick = () => {
     if (!selectedModel) return;
     const now = Date.now();
     const model = MODELS[selectedModel];
-    if (now - lastClickTime < model.clickCooldown) return;
+    const actualCooldown = Math.max(50, model.clickCooldown - (upgrades.clickCooldown * UPGRADES.clickCooldown.benefitPerLvl));
+    if (now - lastClickTime < actualCooldown) return;
 
     playSound(600 + Math.random() * 200, 'sine', 0.05);
     setLastClickTime(now);
@@ -402,6 +449,22 @@ const App: React.FC = () => {
                 canAfford={money >= UPGRADES.autonomousWarfare.cost}
                 isSingle={true}
                 purchased={upgrades.autonomousWarfare}
+              />
+              <UpgradeItem 
+                label={UPGRADES.autoClicker.label}
+                desc={UPGRADES.autoClicker.description}
+                level={upgrades.autoClicker}
+                cost={getNextCost(UPGRADES.autoClicker, upgrades.autoClicker)}
+                onBuy={() => buyUpgrade('autoClicker')}
+                canAfford={money >= getNextCost(UPGRADES.autoClicker, upgrades.autoClicker)}
+              />
+              <UpgradeItem 
+                label={UPGRADES.clickCooldown.label}
+                desc={UPGRADES.clickCooldown.description}
+                level={upgrades.clickCooldown}
+                cost={getNextCost(UPGRADES.clickCooldown, upgrades.clickCooldown)}
+                onBuy={() => buyUpgrade('clickCooldown')}
+                canAfford={money >= getNextCost(UPGRADES.clickCooldown, upgrades.clickCooldown)}
               />
             </div>
           </div>

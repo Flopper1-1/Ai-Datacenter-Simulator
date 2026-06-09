@@ -21,4 +21,6 @@ export interface UpgradesState {
   gameGen: number;
   autonomousWarfare: boolean;
   partnership: number;
+  autoClicker: number;
+  clickCooldown: number;
 }

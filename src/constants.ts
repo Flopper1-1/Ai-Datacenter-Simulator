@@ -81,5 +81,19 @@ export const UPGRADES = {
     benefitPerLvl: 50,
     label: "Partnership",
     description: "+$/s"
+  },
+  autoClicker: {
+    baseCost: 1000,
+    costMult: 2,
+    benefitPerLvl: 1,
+    label: "Autoclicker",
+    description: "Auto-clicks every second"
+  },
+  clickCooldown: {
+    baseCost: 100,
+    costMult: 2,
+    benefitPerLvl: 50, // 0.05s = 50ms
+    label: "Fast Response",
+    description: "-0.05s click cooldown"
   }
 };
