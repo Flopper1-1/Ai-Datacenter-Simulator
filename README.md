@@ -26,14 +26,24 @@ In this simulator, you manage high-performance Large Language Models (LLMs) to g
   - **AI Video Generation:** (Requires Image Gen) Massive increase in processing power.
   - **AI Video Game Generation:** (Requires Video Gen) The pinnacle of AI content.
 - **Autonomous Warfare:** A massive late-game boost to processing speed.
+- **Autoclicker:** Automates the inference process ($1,000 base).
+- **Fast Response:** Shortens the click cooldown by 0.05s ($100 base, doubles each level).
+
+### Dynamic Events
+- **Random Events:** Temporary events like "Greenpeace Protests" or "Server Overheat" dynamically affect your rates and reputation.
 
 ### Global Diplomacy
 - **Partnerships:** Leverage your reputation to secure massive passive budget increases.
 
+## 🖥️ Electron Desktop App
+The simulator now runs as a standalone desktop application via Electron, featuring a persistent save system that carries over between versions.
+
 ## 🛠️ Tech Stack
+- **Engine:** Electron
 - **Framework:** React 18
 - **Language:** TypeScript
 - **Bundler:** Vite
+- **Storage:** Electron Store (Cross-version persistence)
 - **Styling:** Vanilla CSS (Cyberpunk/Terminal theme)
 
 ## 🛠️ Development
@@ -45,14 +55,19 @@ To run the project locally:
    npm install
    ```
 
-2. Start the development server:
+2. Start the web development server:
    ```bash
    npm run dev
    ```
 
-3. Build for production:
+3. Start the Electron development environment:
    ```bash
-   npm run build
+   npm run electron:dev
+   ```
+
+4. Build the Electron application:
+   ```bash
+   npm run electron:build
    ```
 
 ---
