@@ -18,13 +18,86 @@ const App: React.FC = () => {
     autonomousWarfare: false,
     partnership: 0,
   });
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [activeEvent, setActiveEvent] = useState<{title: string, desc: string, effect: string} | null>(null);
+
+  const audioCtx = useRef<AudioContext | null>(null);
+
+  const playSound = (freq: number, type: OscillatorType = 'sine', duration = 0.1) => {
+    if (!audioCtx.current) audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = audioCtx.current.createOscillator();
+    const gain = audioCtx.current.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.current.currentTime);
+    gain.gain.setValueAtTime(0.1, audioCtx.current.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.current.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.current.destination);
+    osc.start();
+    osc.stop(audioCtx.current.currentTime + duration);
+  };
 
   const lastUpdateRef = useRef<number>(Date.now());
   const bearsRef = useRef(0);
   const moneyRef = useRef(0);
   const repRef = useRef(0);
 
-  // Sync refs with state for the game loop to avoid stale closures
+  // Random Events Logic
+  useEffect(() => {
+    const eventInterval = setInterval(() => {
+      if (Math.random() > 0.7 && !activeEvent) {
+        const events = [
+          { title: "Greenpeace Protest", desc: "Activists are blocking the cooling vents! PB generation slowed, but Reputation increased.", effect: "PROTEST" },
+          { title: "Venture Capital Surge", desc: "A surprise funding round! Money flows freely.", effect: "FUNDING" },
+          { title: "Server Overheat", desc: "Critical temperature reached! Processing power halved.", effect: "OVERHEAT" }
+        ];
+        const evt = events[Math.floor(Math.random() * events.length)];
+        setActiveEvent(evt);
+        playSound(440, 'square', 0.3);
+        setTimeout(() => setActiveEvent(null), 15000);
+      }
+    }, 30000);
+    return () => clearInterval(eventInterval);
+  }, [activeEvent]);
+
+  // Load Game
+  useEffect(() => {
+    const saved = localStorage.getItem('ai-datacenter-save');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        setPolarBears(data.polarBears || 0);
+        setMoney(data.money || 0);
+        setRep(data.rep || 0);
+        setUpgrades(data.upgrades || upgrades);
+        setSelectedModel(data.selectedModel || null);
+        bearsRef.current = data.polarBears || 0;
+        moneyRef.current = data.money || 0;
+        repRef.current = data.rep || 0;
+      } catch (e) {
+        console.error("Failed to load save", e);
+      }
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Auto Save
+  useEffect(() => {
+    if (!isLoaded) return;
+    const interval = setInterval(() => {
+      const saveData = {
+        polarBears,
+        money,
+        rep,
+        upgrades,
+        selectedModel
+      };
+      localStorage.setItem('ai-datacenter-save', JSON.stringify(saveData));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [polarBears, money, rep, upgrades, selectedModel, isLoaded]);
+
+  // Sync refs with state
   useEffect(() => {
     bearsRef.current = polarBears;
     moneyRef.current = money;
@@ -103,6 +176,7 @@ const App: React.FC = () => {
     const model = MODELS[selectedModel];
     if (now - lastClickTime < model.clickCooldown) return;
 
+    playSound(600 + Math.random() * 200, 'sine', 0.05);
     setLastClickTime(now);
     processResourceGain(model.pbPerClick, model.moneyPerClick, 0);
   };
@@ -110,6 +184,7 @@ const App: React.FC = () => {
   const buyUpgrade = (type: keyof UpgradesState) => {
     if (type === 'autonomousWarfare') {
       if (money >= UPGRADES.autonomousWarfare.cost && !upgrades.autonomousWarfare) {
+        playSound(880, 'triangle', 0.2);
         setMoney(m => m - UPGRADES.autonomousWarfare.cost);
         setUpgrades(prev => ({ ...prev, autonomousWarfare: true }));
       }
@@ -119,6 +194,7 @@ const App: React.FC = () => {
     if (type === 'partnership') {
       const cost = UPGRADES.partnership.baseCost * Math.pow(UPGRADES.partnership.costMult, upgrades.partnership);
       if (rep >= cost) {
+        playSound(880, 'triangle', 0.2);
         setRep(r => r - cost);
         setUpgrades(prev => ({ ...prev, partnership: prev.partnership + 1 }));
       }
@@ -132,6 +208,7 @@ const App: React.FC = () => {
     const cost = upgradeCfg.baseCost * Math.pow(upgradeCfg.costMult, currentLevel);
 
     if (money >= cost) {
+      playSound(880, 'triangle', 0.2);
       setMoney(m => m - cost);
       setUpgrades(prev => ({ ...prev, [type]: (prev[type] as number) + 1 }));
     }
@@ -141,11 +218,13 @@ const App: React.FC = () => {
     if (!selectedModel) return;
     if (selectedModel === 'GPT') {
       if (money >= 30) {
+        playSound(1200, 'sine', 0.1);
         setMoney(m => m - 30);
         setRep(r => r + 1);
       }
     } else if (selectedModel === 'Gemma') {
       if (rep >= 1) {
+        playSound(1200, 'sine', 0.1);
         setRep(r => r - 1);
         setMoney(m => m + 78);
       }
@@ -165,7 +244,10 @@ const App: React.FC = () => {
           {(Object.keys(MODELS) as ModelType[]).map(m => {
             const stats = MODELS[m];
             return (
-              <div key={m} className={`model-card ${m.toLowerCase()}`} onClick={() => setSelectedModel(m)}>
+              <div key={m} className={`model-card ${m.toLowerCase()}`} onClick={() => {
+                playSound(440, 'sine', 0.1);
+                setSelectedModel(m);
+              }}>
                 <div className="card-glow"></div>
                 <h2 className="model-name">{m}</h2>
                 <div className="stats-list">
@@ -201,6 +283,12 @@ const App: React.FC = () => {
 
   return (
     <div className="game-container">
+      {activeEvent && (
+        <div className={`event-popup ${activeEvent.effect.toLowerCase()}`}>
+          <h4>⚠️ {activeEvent.title}</h4>
+          <p>{activeEvent.desc}</p>
+        </div>
+      )}
       <header className="stats-header">
         <div className="stat-box pb">
           <label>Polar Bears Extinguished</label>
