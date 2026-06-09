@@ -44,7 +44,7 @@ export const UPGRADES = {
     initialBenefit: 0.009,
     benefitPerLvl: 0.005,
     label: "Cooling Hack",
-    description: "+PB/s"
+    description: "+0.009 PB/s"
   },
   imageGen: {
     baseCost: 5000,

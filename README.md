@@ -9,7 +9,7 @@ In this simulator, you manage high-performance Large Language Models (LLMs) to g
 ### Choose Your Core Model
 - **GPT:** Fast click cooldown, balanced revenue, and a special protocol to convert money into reputation.
 - **Sonnet:** High reward per click, generates reputation over time, but has a significant cooling period.
-- **Gemma:** Massive polar bear generation with high click rewards and a special protocol to liquidate reputation for cash.
+- **Gemma:** Massive polar bear generation with high click rewards, a special protocol to liquidate reputation for cash, but suffers a -0.09 reputation penalty per second.
 
 ## 🚀 Features
 
@@ -30,7 +30,7 @@ In this simulator, you manage high-performance Large Language Models (LLMs) to g
 - **Fast Response:** Shortens the click cooldown by 0.05s ($100 base, doubles each level).
 
 ### Dynamic Events
-- **Random Events:** Temporary events like "Greenpeace Protests" or "Server Overheat" dynamically affect your rates and reputation.
+- **Random Events:** Temporary events like "Greenpeace Protests" or "Server Overheat" dynamically affect your rates and reputation. These events last for 2 minutes.
 
 ### Global Diplomacy
 - **Partnerships:** Leverage your reputation to secure massive passive budget increases.

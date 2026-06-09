@@ -22,6 +22,7 @@ const App: React.FC = () => {
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [activeEvent, setActiveEvent] = useState<{title: string, desc: string, effect: string} | null>(null);
+  const [eventEndTime, setEventEndTime] = useState<number | null>(null);
 
   const audioCtx = useRef<AudioContext | null>(null);
 
@@ -55,8 +56,12 @@ const App: React.FC = () => {
         ];
         const evt = events[Math.floor(Math.random() * events.length)];
         setActiveEvent(evt);
+        setEventEndTime(Date.now() + 120000);
         playSound(440, 'square', 0.3);
-        setTimeout(() => setActiveEvent(null), 15000);
+        setTimeout(() => {
+          setActiveEvent(null);
+          setEventEndTime(null);
+        }, 120000);
       }
     }, 30000);
     return () => clearInterval(eventInterval);
@@ -155,6 +160,7 @@ const App: React.FC = () => {
     }
 
     let repRate = selectedModel === 'Sonnet' ? 0.009 : 0;
+    if (selectedModel === 'Gemma') repRate -= 0.09;
 
     // Apply event effects
     if (activeEvent) {
@@ -334,12 +340,15 @@ const App: React.FC = () => {
         <div className={`event-popup ${activeEvent.effect.toLowerCase()}`}>
           <h4>⚠️ {activeEvent.title}</h4>
           <p>{activeEvent.desc}</p>
+          {eventEndTime && (
+            <div className="event-timer">Ends in: {Math.max(0, Math.floor((eventEndTime - Date.now()) / 1000))}s</div>
+          )}
         </div>
       )}
       <header className="stats-header">
         <div className="stat-box pb">
           <label>Polar Bears Extinguished</label>
-          <div className="value">{Math.floor(polarBears)}</div>
+          <div className="value">{polarBears.toFixed(3)}</div>
           <div className="progress-container">
             <div className="progress-bar" style={{ width: `${(polarBears % 1) * 100}%` }}></div>
           </div>
